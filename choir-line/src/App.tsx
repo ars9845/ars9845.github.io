@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { v4 as uuidv4 } from "uuid";
+import "./App.css"; // ✅ 스타일 분리 적용
 
 const parts = ["Soprano", "Alto", "Tenor", "Bass"] as const;
 type Part = (typeof parts)[number];
@@ -98,7 +99,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         generateMembers();
-    }, []);
+    }, [counts, rowCount, layoutMode]); // ✅ 의존성 추가
 
     const moveMember = (fromRow: number, fromIndex: number, toRow: number, toIndex: number) => {
         setRows((prev) => {
@@ -115,36 +116,13 @@ const App: React.FC = () => {
 
     return (
         <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true }}>
-            <div style={{ padding: 20 }}>
-                <div
-                    style={{
-                        marginBottom: 30,
-                        border: "1px solid #ddd",
-                        borderRadius: 16,
-                        padding: 25,
-                        background: "linear-gradient(145deg, #ffffff, #f1f1f1)",
-                        boxShadow: "0 8px 20px rgba(0, 0, 0, 0.08)",
-                        maxWidth: 1000,
-                        margin: "0 auto 50px",
-                    }}
-                >
+            <div className="container">
+                <div className="setting-box">
                     <h2 style={{ marginBottom: 10, textAlign: "center" }}>입력 설정</h2>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 24,
-                            justifyContent: "center",
-                            alignItems: "flex-end",
-                            marginBottom: 15,
-                        }}
-                    >
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 24, justifyContent: "center" }}>
                         {parts.map((part) => (
-                            <div
-                                key={part}
-                                style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 90 }}
-                            >
-                                <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>{part}</label>
+                            <div key={part} style={{ display: "flex", flexDirection: "column", minWidth: 90 }}>
+                                <label className="label">{part}</label>
                                 <input
                                     type="number"
                                     min="0"
@@ -152,67 +130,37 @@ const App: React.FC = () => {
                                     onChange={(e) =>
                                         setCounts((prev) => ({ ...prev, [part]: parseInt(e.target.value) || 0 }))
                                     }
-                                    style={{
-                                        padding: "6px 10px",
-                                        width: "100%",
-                                        textAlign: "center",
-                                        borderRadius: 6,
-                                        border: "1px solid #ccc",
-                                        outline: "none",
-                                        fontSize: 14,
-                                    }}
+                                    className="input"
                                 />
                             </div>
                         ))}
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 90 }}>
-                            <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>줄 수</label>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 90 }}>
+                            <label className="label">줄 수</label>
                             <input
                                 type="number"
                                 min="1"
                                 value={rowCount}
                                 onChange={(e) => setRowCount(parseInt(e.target.value) || 1)}
-                                style={{
-                                    padding: "6px 10px",
-                                    width: "100%",
-                                    textAlign: "center",
-                                    borderRadius: 6,
-                                    border: "1px solid #ccc",
-                                    outline: "none",
-                                    fontSize: 14,
-                                }}
+                                className="input"
                             />
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 120 }}>
-                            <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>전체 인원 수</label>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 120 }}>
+                            <label className="label">전체 인원 수</label>
                             <input
                                 type="number"
                                 value={totalCount}
                                 readOnly
-                                style={{
-                                    padding: "6px 10px",
-                                    width: "100%",
-                                    textAlign: "center",
-                                    backgroundColor: "#e9ecef",
-                                    borderRadius: 6,
-                                    border: "1px solid #ccc",
-                                    fontSize: 14,
-                                }}
+                                className="input"
+                                style={{ backgroundColor: "#e9ecef" }}
                             />
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 220 }}>
-                            <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>배치 조건</label>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 220 }}>
+                            <label className="label">배치 조건</label>
                             <select
                                 value={layoutMode}
                                 onChange={(e) => setLayoutMode(e.target.value as any)}
                                 disabled={rowCount < 4 && layoutMode === "condition2"}
-                                style={{
-                                    padding: "6px 10px",
-                                    width: "100%",
-                                    textAlign: "center",
-                                    borderRadius: 6,
-                                    border: "1px solid #ccc",
-                                    fontSize: 14,
-                                }}
+                                className="select"
                             >
                                 <option value="auto">자동</option>
                                 <option value="condition1">조건1 (Alto→Soprano, Tenor→Bass)</option>
@@ -221,18 +169,7 @@ const App: React.FC = () => {
                                 </option>
                             </select>
                         </div>
-                        <button
-                            onClick={generateMembers}
-                            style={{
-                                padding: "10px 20px",
-                                background: "#007bff",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: 6,
-                                fontSize: 14,
-                                height: 44,
-                            }}
-                        >
+                        <button onClick={generateMembers} className="button">
                             전체 재배치
                         </button>
                     </div>
@@ -263,9 +200,10 @@ const Row: React.FC<{
                 display: "flex",
                 justifyContent: "center",
                 marginBottom: 20,
-                flexWrap: "nowrap",
                 gap: 10,
                 marginLeft: indent,
+                minWidth: maxCount * memberWidth, // ✅ 고정 너비 복원
+                flexWrap: "nowrap", // ✅ 줄바꿈 제거
                 width: "100%",
                 boxSizing: "border-box",
             }}
@@ -286,6 +224,7 @@ const DraggableMember: React.FC<{
     const [{ isDragging }, dragRef] = useDrag(() => ({
         type: ItemType,
         item: { index, row },
+        canDrag: () => !!member,
         collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     }));
 
@@ -309,7 +248,7 @@ const DraggableMember: React.FC<{
                 border: "1px dashed #ccc",
                 opacity: isDragging ? 0.5 : 1,
                 textAlign: "center",
-                cursor: "move",
+                cursor: member ? "move" : "default",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
