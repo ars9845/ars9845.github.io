@@ -116,7 +116,13 @@ const App: React.FC = () => {
 
     return (
         <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true }}>
-            <div className="container">
+            <div
+                className="container"
+                style={{
+                    overflowX: "auto", // ✅ 전체 화면이 스크롤 담당
+                    WebkitOverflowScrolling: "touch", // ✅ iOS 부드러운 스크롤
+                }}
+            >
                 <div className="setting-box">
                     <h2 style={{ marginBottom: 10, textAlign: "center" }}>입력 설정</h2>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 24, justifyContent: "center" }}>
@@ -175,7 +181,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                <div style={{ maxWidth: "100vw", overflowX: "auto" }}>
+                <div style={{ display: "flex", flexDirection: "column", width: "max-content" }}>
                     {rows.map((row, i) => (
                         <Row key={i} rowIndex={i} members={row} moveMember={moveMember} maxCount={maxCount} />
                     ))}
