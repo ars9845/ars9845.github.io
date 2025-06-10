@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
+import { TouchBackend } from "react-dnd-touch-backend";
 import { v4 as uuidv4 } from "uuid";
 
 const parts = ["Soprano", "Alto", "Tenor", "Bass"] as const;
@@ -186,7 +186,7 @@ const App: React.FC = () => {
     const maxRowLength = Math.max(...rows.map((r) => r.length), 1);
 
     return (
-        <DndProvider backend={HTML5Backend}>
+        <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true }}>
             <div style={{ padding: 30 }}>
                 <h1>🎶 합창단 무대 배치</h1>
 
