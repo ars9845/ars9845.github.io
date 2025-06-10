@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { v4 as uuidv4 } from "uuid";
@@ -20,6 +20,234 @@ const partColors: Record<Part, string> = {
 
 const ItemType = "MEMBER";
 
+const App: React.FC = () => {
+    const [counts, setCounts] = useState<Record<Part, number>>({
+        Soprano: 10,
+        Alto: 10,
+        Tenor: 5,
+        Bass: 5,
+    });
+    const [rowCount, setRowCount] = useState(3);
+    const [layoutMode, setLayoutMode] = useState<"auto" | "condition1" | "condition2">("auto");
+    const [rows, setRows] = useState<(Member | null)[][]>([]);
+
+    const generateMembers = () => {
+        const soprano = Array.from({ length: counts.Soprano }, (_, i) => ({
+            id: uuidv4(),
+            name: `S${i + 1}`,
+            part: "Soprano" as Part,
+        }));
+        const alto = Array.from({ length: counts.Alto }, (_, i) => ({
+            id: uuidv4(),
+            name: `A${i + 1}`,
+            part: "Alto" as Part,
+        }));
+        const tenor = Array.from({ length: counts.Tenor }, (_, i) => ({
+            id: uuidv4(),
+            name: `T${i + 1}`,
+            part: "Tenor" as Part,
+        }));
+        const bass = Array.from({ length: counts.Bass }, (_, i) => ({
+            id: uuidv4(),
+            name: `B${i + 1}`,
+            part: "Bass" as Part,
+        }));
+
+        const newRows: (Member | null)[][] = Array.from({ length: rowCount }, () => []);
+
+        const flatInsert = (members: Member[], targetRows: number[]) => {
+            let i = 0;
+            for (const m of members) {
+                const row = targetRows[i % targetRows.length];
+                newRows[row].push(m);
+                i++;
+            }
+        };
+
+        if (layoutMode === "condition1") {
+            flatInsert([...alto, ...soprano], [0, 1]);
+            flatInsert([...bass, ...tenor], [2]);
+        } else if (layoutMode === "condition2") {
+            flatInsert([...alto, ...soprano], [0, 1, 2]);
+            flatInsert([...bass, ...tenor], [3]);
+        } else {
+            if (rowCount === 3) {
+                flatInsert([...alto, ...soprano], [0, 1]);
+                flatInsert([...bass, ...tenor], [2]);
+            } else if (rowCount >= 4) {
+                flatInsert([...alto, ...soprano], [0, 1, 2]);
+                flatInsert([...bass, ...tenor], [rowCount - 1]);
+            } else {
+                flatInsert(
+                    [...alto, ...soprano, ...tenor, ...bass],
+                    Array.from({ length: rowCount }, (_, i) => i)
+                );
+            }
+        }
+
+        const max = Math.max(...newRows.map((r) => r.length));
+        const padded = newRows.map((row) => {
+            const diff = max - row.length;
+            const padLeft = Math.floor(diff / 2);
+            const padRight = diff - padLeft;
+            return [...Array(padLeft).fill(null), ...row, ...Array(padRight).fill(null)];
+        });
+
+        setRows(padded);
+    };
+
+    useEffect(() => {
+        generateMembers();
+    }, []);
+
+    const moveMember = (fromRow: number, fromIndex: number, toRow: number, toIndex: number) => {
+        setRows((prev) => {
+            const newRows = [...prev.map((row) => [...row])];
+            const dragged = newRows[fromRow][fromIndex];
+            newRows[fromRow][fromIndex] = newRows[toRow][toIndex];
+            newRows[toRow][toIndex] = dragged;
+            return newRows;
+        });
+    };
+
+    const maxCount = Math.max(...rows.map((r) => r.length), 0);
+    const totalCount = Object.values(counts).reduce((sum, val) => sum + val, 0);
+
+    return (
+        <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true }}>
+            <div style={{ padding: 20 }}>
+                <div
+                    style={{
+                        marginBottom: 30,
+                        border: "1px solid #ddd",
+                        borderRadius: 16,
+                        padding: 25,
+                        background: "linear-gradient(145deg, #ffffff, #f1f1f1)",
+                        boxShadow: "0 8px 20px rgba(0, 0, 0, 0.08)",
+                        maxWidth: 1000,
+                        margin: "0 auto 50px",
+                    }}
+                >
+                    <h2 style={{ marginBottom: 10, textAlign: "center" }}>입력 설정</h2>
+                    <div
+                        style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 24,
+                            justifyContent: "center",
+                            alignItems: "flex-end",
+                            marginBottom: 15,
+                        }}
+                    >
+                        {parts.map((part) => (
+                            <div
+                                key={part}
+                                style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 90 }}
+                            >
+                                <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>{part}</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={counts[part]}
+                                    onChange={(e) =>
+                                        setCounts((prev) => ({ ...prev, [part]: parseInt(e.target.value) || 0 }))
+                                    }
+                                    style={{
+                                        padding: "6px 10px",
+                                        width: "100%",
+                                        textAlign: "center",
+                                        borderRadius: 6,
+                                        border: "1px solid #ccc",
+                                        outline: "none",
+                                        fontSize: 14,
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 90 }}>
+                            <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>줄 수</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={rowCount}
+                                onChange={(e) => setRowCount(parseInt(e.target.value) || 1)}
+                                style={{
+                                    padding: "6px 10px",
+                                    width: "100%",
+                                    textAlign: "center",
+                                    borderRadius: 6,
+                                    border: "1px solid #ccc",
+                                    outline: "none",
+                                    fontSize: 14,
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 120 }}>
+                            <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>전체 인원 수</label>
+                            <input
+                                type="number"
+                                value={totalCount}
+                                readOnly
+                                style={{
+                                    padding: "6px 10px",
+                                    width: "100%",
+                                    textAlign: "center",
+                                    backgroundColor: "#e9ecef",
+                                    borderRadius: 6,
+                                    border: "1px solid #ccc",
+                                    fontSize: 14,
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 220 }}>
+                            <label style={{ fontWeight: 600, color: "#333", marginBottom: 5 }}>배치 조건</label>
+                            <select
+                                value={layoutMode}
+                                onChange={(e) => setLayoutMode(e.target.value as any)}
+                                disabled={rowCount < 4 && layoutMode === "condition2"}
+                                style={{
+                                    padding: "6px 10px",
+                                    width: "100%",
+                                    textAlign: "center",
+                                    borderRadius: 6,
+                                    border: "1px solid #ccc",
+                                    fontSize: 14,
+                                }}
+                            >
+                                <option value="auto">자동</option>
+                                <option value="condition1">조건1 (Alto→Soprano, Tenor→Bass)</option>
+                                <option value="condition2" disabled={rowCount < 4}>
+                                    조건2 (Alto→Soprano, Tenor→Bass)
+                                </option>
+                            </select>
+                        </div>
+                        <button
+                            onClick={generateMembers}
+                            style={{
+                                padding: "10px 20px",
+                                background: "#007bff",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: 6,
+                                fontSize: 14,
+                                height: 44,
+                            }}
+                        >
+                            전체 재배치
+                        </button>
+                    </div>
+                </div>
+
+                <div style={{ maxWidth: "100vw", overflowX: "auto" }}>
+                    {rows.map((row, i) => (
+                        <Row key={i} rowIndex={i} members={row} moveMember={moveMember} maxCount={maxCount} />
+                    ))}
+                </div>
+            </div>
+        </DndProvider>
+    );
+};
+
 const Row: React.FC<{
     rowIndex: number;
     members: (Member | null)[];
@@ -27,21 +255,22 @@ const Row: React.FC<{
     maxCount: number;
 }> = ({ rowIndex, members, moveMember, maxCount }) => {
     const memberWidth = 110;
-    const totalRowWidth = maxCount * memberWidth;
-    const currentRowWidth = members.length * memberWidth;
     const indent = (rowIndex % 2) * (memberWidth / 2);
-    const leftMargin = Math.max((totalRowWidth - currentRowWidth) / 2 + indent, 0);
 
     return (
         <div
             style={{
                 display: "flex",
-                marginLeft: leftMargin,
+                justifyContent: "center",
                 marginBottom: 20,
-                minHeight: 60,
+                flexWrap: "nowrap",
+                gap: 10,
+                marginLeft: indent,
+                width: "100%",
+                boxSizing: "border-box",
             }}
         >
-            {members.slice(0, maxCount).map((member, index) => (
+            {members.map((member, index) => (
                 <DraggableMember key={index} member={member} index={index} row={rowIndex} moveMember={moveMember} />
             ))}
         </div>
@@ -63,9 +292,7 @@ const DraggableMember: React.FC<{
     const [, dropRef] = useDrop(() => ({
         accept: ItemType,
         drop: (item: { index: number; row: number }) => {
-            if (item.row !== row || item.index !== index) {
-                moveMember(item.row, item.index, row, index);
-            }
+            moveMember(item.row, item.index, row, index);
         },
     }));
 
@@ -78,12 +305,17 @@ const DraggableMember: React.FC<{
                 padding: 10,
                 width: 100,
                 height: 50,
-                marginRight: 10,
                 backgroundColor: member ? partColors[member.part] : "#f0f0f0",
                 border: "1px dashed #ccc",
                 opacity: isDragging ? 0.5 : 1,
                 textAlign: "center",
                 cursor: "move",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                boxSizing: "border-box",
+                flexShrink: 0,
             }}
         >
             {member ? (
@@ -95,149 +327,6 @@ const DraggableMember: React.FC<{
                 <div style={{ color: "#ccc", fontSize: 12 }}>빈자리</div>
             )}
         </div>
-    );
-};
-
-const App: React.FC = () => {
-    const [layoutMode, setLayoutMode] = useState<"auto" | "condition1" | "condition2">("auto");
-    const [counts, setCounts] = useState<Record<Part, string>>({
-        Soprano: "9",
-        Alto: "10",
-        Tenor: "5",
-        Bass: "5",
-    });
-
-    const [rowCount, setRowCount] = useState(3);
-    const [rows, setRows] = useState<(Member | null)[][]>([]);
-
-    const generateMembers = () => {
-        const soprano = Array.from({ length: parseInt(counts.Soprano) || 0 }, (_, i) => ({
-            id: uuidv4(),
-            name: `S${i}`,
-            part: "Soprano" as Part,
-        }));
-        const alto = Array.from({ length: parseInt(counts.Alto) || 0 }, (_, i) => ({
-            id: uuidv4(),
-            name: `A${i}`,
-            part: "Alto" as Part,
-        }));
-        const tenor = Array.from({ length: parseInt(counts.Tenor) || 0 }, (_, i) => ({
-            id: uuidv4(),
-            name: `T${i}`,
-            part: "Tenor" as Part,
-        }));
-        const bass = Array.from({ length: parseInt(counts.Bass) || 0 }, (_, i) => ({
-            id: uuidv4(),
-            name: `B${i}`,
-            part: "Bass" as Part,
-        }));
-
-        const newRows: (Member | null)[][] = Array.from({ length: rowCount }, () => []);
-
-        const flatInsert = (members: Member[], targetRows: number[]) => {
-            let i = 0;
-            for (const m of members) {
-                const row = targetRows[i % targetRows.length];
-                newRows[row].push(m);
-                i++;
-            }
-        };
-
-        if (layoutMode === "condition1") {
-            flatInsert([...soprano, ...alto], [0, 1]);
-            flatInsert([...tenor, ...bass], [2]);
-        } else if (layoutMode === "condition2") {
-            flatInsert([...soprano, ...alto], [0, 1, 2]);
-            flatInsert([...tenor, ...bass], [3]);
-        } else {
-            flatInsert(
-                [...soprano, ...alto, ...tenor, ...bass],
-                Array.from({ length: rowCount }, (_, i) => i)
-            );
-        }
-
-        const maxLength = Math.max(...newRows.map((r) => r.length));
-        const balancedRows = newRows.map((row, idx) => {
-            const trimmed = row.slice(0, maxLength);
-            const diff = maxLength - trimmed.length;
-            const padLeft = Math.floor(diff / 2);
-            const padRight = diff - padLeft;
-            return [
-                ...Array.from({ length: padLeft }, () => null),
-                ...trimmed,
-                ...Array.from({ length: padRight }, () => null),
-            ];
-        });
-
-        setRows(balancedRows);
-    };
-
-    const moveMember = (fromRow: number, fromIndex: number, toRow: number, toIndex: number) => {
-        setRows((prev) => {
-            const newRows = prev.map((row) => [...row]);
-            const fromMember = newRows[fromRow][fromIndex];
-            const toMember = newRows[toRow][toIndex];
-            newRows[fromRow][fromIndex] = toMember;
-            newRows[toRow][toIndex] = fromMember;
-            return newRows;
-        });
-    };
-
-    const maxRowLength = Math.max(...rows.map((r) => r.length), 1);
-
-    return (
-        <DndProvider backend={TouchBackend} options={{ enableMouseEvents: true }}>
-            <div style={{ padding: 30 }}>
-                <h1>🎶 합창단 무대 배치</h1>
-
-                {parts.map((part) => (
-                    <div key={part}>
-                        <label>{part}</label>
-                        <input
-                            type="number"
-                            min="0"
-                            value={counts[part]}
-                            onChange={(e) => setCounts((prev) => ({ ...prev, [part]: e.target.value }))}
-                        />
-                    </div>
-                ))}
-
-                <div>
-                    <label>전체 인원 수</label>
-                    <input
-                        type="number"
-                        min="0"
-                        value={Object.values(counts).reduce((sum, val) => sum + (parseInt(val) || 0), 0)}
-                        readOnly
-                    />
-                </div>
-
-                <div>
-                    <label>줄 수</label>
-                    <input
-                        type="number"
-                        min="1"
-                        value={rowCount}
-                        onChange={(e) => setRowCount(Math.max(1, parseInt(e.target.value) || 1))}
-                    />
-                </div>
-
-                <div>
-                    <label>배치 조건</label>
-                    <select value={layoutMode} onChange={(e) => setLayoutMode(e.target.value as any)}>
-                        <option value="auto">자동</option>
-                        <option value="condition1">조건1 (1,2=S/A, 3=T/B)</option>
-                        <option value="condition2">조건2 (1~3=S/A, 4=T/B)</option>
-                    </select>
-                </div>
-
-                <button onClick={generateMembers}>전체 재배치</button>
-            </div>
-
-            {rows.map((row, i) => (
-                <Row key={i} rowIndex={i} members={row} moveMember={moveMember} maxCount={maxRowLength} />
-            ))}
-        </DndProvider>
     );
 };
 
