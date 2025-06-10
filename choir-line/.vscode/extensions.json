@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "github.codespaces",
+        "github.copilot-chat",
+        "github.copilot",
+        "tabnine.tabnine-vscode",
+        "openai.chatgpt"
+    ]
+}
